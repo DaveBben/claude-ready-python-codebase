@@ -1,0 +1,14 @@
+rules:
+  - id: logger-name-from-dunder-name
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "src/**"
+    pattern: logging.getLogger("...")
+    message: >-
+      Name the logger __name__, not a string literal:
+      logging.getLogger(__name__). The literal drifts the moment the module
+      moves or is renamed, and it breaks the dotted hierarchy that lets you set
+      a level for one subtree. It also lands in the "logger" field of the JSON
+      output, so a stale name misroutes the log line.

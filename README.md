@@ -30,16 +30,20 @@ Then make it yours: rename `src/example_project/` and the matching names in `pyp
 ```bash
 uv run pytest                # full test suite
 uv run pytest --cov          # …with branch coverage and missing lines
-uv run mypy src              # strict type check
+uv run mypy src tests        # strict type check
 uv run ruff check src tests  # lint
 uv run ruff format src tests # format
+uv run semgrep --config .semgrep --error --quiet   # this repo's own rules
+uv run lint-imports          # architectural contracts
 ```
 
-You rarely need these by hand: Claude Code hooks lint every edit and type-check every turn, and pre-commit runs lint, format, types, dead code, and the test suite on every commit, plus a dependency CVE audit whenever `uv.lock` changes. The full gate as one line, for CI or an on-demand check:
+You rarely need these by hand. Claude Code hooks lint every edit, then check types, architecture, and the custom rules at the end of every turn; pre-commit runs all of that plus dead code and the test suite on every commit, and a dependency CVE audit whenever `uv.lock` changes. The full gate as one line, for CI or an on-demand check:
 
 ```bash
 uv run ruff check src tests && uv run ruff format --check src tests \
-  && uv run mypy src && uv run vulture && uv run pip-audit && uv run pytest --cov
+  && uv run semgrep --config .semgrep --error --quiet \
+  && uv run mypy src tests && uv run lint-imports \
+  && uv run vulture && uv run pip-audit && uv run pytest --cov
 ```
 
 ## The dev container
@@ -79,31 +83,16 @@ claude --dangerously-skip-permissions
 
 ## What's included
 
-- **A three-layer verification loop** — ruff fixes every edit, mypy checks every turn, and pre-commit runs the whole gate (tests included) on every commit.
-- **Strict tooling with no escape hatches** — an agent-focused ruff rule set, mypy `--strict`, pytest with warnings as errors, vulture for dead code, pip-audit for CVEs, and a gitleaks secret scan.
+- **A three-layer verification loop** — ruff fixes every edit; types, architecture, and the custom rules run at the end of every turn; pre-commit runs the whole gate (tests included) on every commit.
+- **Rules of your own** — `.semgrep/` holds the checks ruff can't express, one per file, each with a failure message written as a prompt. This is where a correction lands, so you never make it twice.
+- **Architectural tests** — `[tool.importlinter]` states which way dependencies are allowed to run and enforces it. The only check in the gate that can tell you a boundary moved.
+- **Strict tooling with no escape hatches** — an agent-focused ruff rule set, mypy `--strict`, pytest with warnings as errors, Hypothesis profiles (fast locally, thorough in CI), vulture for dead code, pip-audit for CVEs, and a gitleaks secret scan.
 - **A TDD workflow** — behavior changes go one failing test at a time, red confirmed before green.
 - **Agent instructions that respect the context window** — a short `CLAUDE.md`, plus path-scoped rules and nested files that load only when relevant. `AGENTS.md` symlinks to it, so Codex, Cursor, Copilot, and other tools read the same guidance.
-- **A focused code-reviewer subagent** — its own tools and model, so diff review runs in a separate context and the main one stays clean.
 - **A clean package skeleton** — src layout, a typed exception root, `py.typed`, and zero runtime dependencies.
 - **Structured logging by default** — a stdlib JSON logger (no dependency) wired into the CLI; set `LOG_LEVEL` or `LOG_JSON=false` to tune it.
 - **Editor parity** — `.vscode/` and `.editorconfig` mirror the commit gate, so the editor and the hooks never disagree.
 - **A container build** — a multi-stage `Dockerfile` (uv build to a minimal non-root runtime) and a `docker-compose.yml` for one-shot runs: `docker compose run --rm app`.
 - **A dev container** — `.devcontainer/` runs the agent in an isolated environment (no host home dir or SSH keys), with the venv and commit gate set up on create.
-- **CI that runs the same gate** — a GitHub Actions workflow runs lint, format, types, dead code, the CVE audit, and tests on every PR, across Python 3.12 and 3.13.
+- **CI that runs the same gate** — a GitHub Actions workflow runs lint, format, the custom rules, types, architecture, dead code, the CVE audit, and tests on every PR, across Python 3.12, 3.13, and 3.14.
 - **Automated dependency updates** — a `renovate.json` keeps `pyproject.toml`, `uv.lock`, and CI action pins current.
-
-## Deep dives
-
-Every default in this repo is deliberate. The reasoning for each lives in its own page under `docs/explanation/repo_defaults/`:
-
-| Topic | What it explains |
-|---|---|
-| [The verification loop](docs/explanation/repo_defaults/verification-loop.md) | The three-layer loop, the edit-time `ruff-fix.sh` hook, and pre-commit. |
-| [How the repo instructs agents](docs/explanation/repo_defaults/agent-instructions.md) | `CLAUDE.md`, nested per-module files, path-scoped rules, and `.claude/settings.json`. |
-| [Ruff config](docs/explanation/repo_defaults/ruff.md) | The linter as a deterministic oracle: every rule family and why it's selected. |
-| [mypy config](docs/explanation/repo_defaults/mypy.md) | Strict typing with no escape hatches, plus five extra checks. |
-| [Tests, coverage, and dead code](docs/explanation/repo_defaults/testing.md) | pytest strictness, branch coverage, and vulture. |
-| [Dependencies and Python versions](docs/explanation/repo_defaults/dependencies.md) | The 3.13/3.12 split, zero runtime deps, the dev toolbox, and the build system. |
-| [Package design](docs/explanation/repo_defaults/package-design.md) | src layout, the typed exception root, and `py.typed`. |
-| [Editor and environment config](docs/explanation/repo_defaults/editor-config.md) | `.editorconfig`, `.vscode/`, `.python-version`, and `.gitignore`. |
-| [Bundled agents](docs/explanation/repo_defaults/skills-and-agents.md) | The delegating subagents, their tools, and their models. |

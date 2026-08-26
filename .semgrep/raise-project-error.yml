@@ -1,0 +1,25 @@
+rules:
+  - id: raise-project-error
+    languages: [python]
+    severity: ERROR
+    paths:
+      # Package conventions only. Tests raise builtins freely to build fixtures
+      # and to exercise error paths.
+      include:
+        - "src/**"
+    patterns:
+      - pattern-either:
+          - pattern: raise $E(...)
+          - pattern: raise $E
+      - metavariable-regex:
+          metavariable: $E
+          # Builtins a caller cannot distinguish from a library's own failure.
+          # NotImplementedError is absent on purpose: it is the correct raise
+          # from an abstract method.
+          regex: ^(Base)?Exception$|^(ValueError|TypeError|RuntimeError|KeyError|OSError|IOError)$
+    message: >-
+      Raise a subclass of ExampleProjectError, not a builtin. Add a new subclass
+      to src/example_project/exceptions.py and raise that. A caller catching
+      ExampleProjectError must be able to catch every failure this package
+      produces; a bare builtin escapes that net and is indistinguishable from a
+      bug in the stdlib call one frame down.

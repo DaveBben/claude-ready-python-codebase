@@ -1,5 +1,6 @@
 """Tests for example_project."""
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -19,6 +20,7 @@ class TestExceptionHierarchy:
         assert issubclass(ExampleProjectError, Exception)
 
 
+@pytest.mark.property
 @given(message=st.text())
 def test_error_carries_message_for_any_input(message: str) -> None:
     """A raised error round-trips its message and keeps the base type.

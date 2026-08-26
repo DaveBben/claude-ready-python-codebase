@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         # Support floor (3.12), dev version (3.13), and newest release (3.14);
-        # see pyproject requires-python. Floor and newest both gate every PR.
+        # see pyproject requires-python. All three gate every PR.
         python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
@@ -34,11 +34,20 @@ jobs:
         run: uv run ruff check src tests
       - name: Format
         run: uv run ruff format --check src tests
+      - name: Custom rules
+        run: uv run semgrep --config .semgrep --error --quiet
       - name: Types
-        run: uv run mypy src
+        run: uv run mypy src tests
+      - name: Architecture
+        run: uv run lint-imports
       - name: Dead code
         run: uv run vulture
       - name: Dependency audit
         run: uv run pip-audit
       - name: Tests
+        # The thorough Hypothesis profile (200 examples, no per-example
+        # deadline). See tests/conftest.py; the default "dev" profile keeps the
+        # local loop fast.
+        env:
+          HYPOTHESIS_PROFILE: ci
         run: uv run pytest --cov

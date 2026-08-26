@@ -1,0 +1,30 @@
+rules:
+  - id: no-logging-reconfiguration
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "src/**"
+      exclude:
+        # The one module that owns logging configuration.
+        - "src/example_project/logger.py"
+    pattern-either:
+      - pattern: logging.basicConfig(...)
+      - pattern: logging.root.addHandler(...)
+      # Called straight off the factory.
+      - pattern: logging.getLogger(...).addHandler(...)
+      # The two-step form: bind a logger, then reconfigure it. Anchored to a
+      # getLogger() binding on purpose — an unanchored `$L.addHandler(...)`
+      # matches any object that happens to have that method name.
+      - patterns:
+          - pattern: $LOGGER.addHandler(...)
+          - pattern-inside: |
+              $LOGGER = logging.getLogger(...)
+              ...
+    message: >-
+      Do not configure logging here. setup_logging() in
+      src/example_project/logger.py owns handler setup and is called once, from
+      the entry point. In a module, get a logger with
+      logging.getLogger(__name__) and log through it. A second basicConfig or
+      addHandler either duplicates every record or silently replaces the JSON
+      formatter, and which one you get depends on import order.

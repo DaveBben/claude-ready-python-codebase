@@ -64,13 +64,17 @@ class TestJsonFormatter:
 
     def test_captures_exception_text(self) -> None:
         def _boom() -> None:
-            msg = "boom"
-            raise ValueError(msg)
+            raise ValueError("boom")
 
         try:
             _boom()
         except ValueError:
             record = _record(exc_info=sys.exc_info())
+        else:
+            # Without this branch `record` is unbound if _boom() ever stops
+            # raising, and the test fails with a NameError instead of saying
+            # what actually went wrong.
+            pytest.fail("expected _boom() to raise ValueError")
 
         payload = json.loads(JsonFormatter().format(record))
 
