@@ -1,22 +1,40 @@
 {
     "version": "2.0.0",
     // Each problemMatcher turns a tool's `file:line` output into Problems-panel
-    // entries and squiggles. ruff and mypy squiggle through their extensions;
-    // these cover the checks with no extension. Squiggles last until the next run.
+    // entries and squiggles. mypy squiggles through its extension. Lint only
+    // reports; Format changes files. Squiggles last until the next run.
     "tasks": [
         {
-            "label": "Lint: vulture + semgrep",
+            "label": "Format: ruff",
             "type": "shell",
-            "command": "uv run vulture; uv run semgrep scan --config .semgrep --emacs --quiet",
+            "command": "uv run ruff check --fix-only src tests; uv run ruff format src tests",
+            "presentation": { "reveal": "silent", "clear": true },
+            "problemMatcher": []
+        },
+        {
+            "label": "Lint: ruff + vulture + semgrep",
+            "type": "shell",
+            "command": "uv run ruff check --output-format concise src tests; uv run vulture; uv run semgrep scan --config .semgrep --emacs --quiet",
             "presentation": { "reveal": "silent", "clear": true },
             "problemMatcher": [
                 {
+                    // src/x.py:4:1: T201 `print` found
+                    "owner": "ruff",
+                    "source": "ruff",
+                    "fileLocation": ["autoDetect", "${workspaceFolder}"],
+                    "pattern": {
+                        "regexp": "^(.+?):(\\d+):(\\d+): ([A-Z]+\\d+) (.*)$",
+                        "file": 1, "line": 2, "column": 3, "code": 4, "message": 5
+                    }
+                },
+                {
                     // tests/x.py:57: unused function 'f' (60% confidence)
+                    // Anchored on the suffix so it can't also claim a ruff line.
                     "owner": "vulture",
                     "source": "vulture",
                     "severity": "error",
                     "fileLocation": ["autoDetect", "${workspaceFolder}"],
-                    "pattern": { "regexp": "^(.+?):(\\d+): (.*)$", "file": 1, "line": 2, "message": 3 }
+                    "pattern": { "regexp": "^(.+?):(\\d+): (.*\\(\\d+% confidence\\))$", "file": 1, "line": 2, "message": 3 }
                 },
                 {
                     // src/x.py:2:7:error(rule-id):<code line>:<message>

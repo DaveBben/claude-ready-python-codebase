@@ -91,7 +91,7 @@ claude --dangerously-skip-permissions
 - **Agent instructions that respect the context window** — a short `CLAUDE.md`, plus path-scoped rules and nested files that load only when relevant. `AGENTS.md` symlinks to it, so Codex, Cursor, Copilot, and other tools read the same guidance.
 - **A clean package skeleton** — src layout, a typed exception root, `py.typed`, and zero runtime dependencies.
 - **Structured logging by default** — a stdlib JSON logger (no dependency) wired into the CLI; set `LOG_LEVEL` or `LOG_JSON=false` to tune it.
-- **Editor parity** — `.vscode/` and `.editorconfig` mirror the commit gate, so the editor and the hooks never disagree. `tasks.json` adds a "Lint: vulture + semgrep" task that puts their findings in the Problems panel, and makes the unit tests the default test task (**Tasks: Run Test Task**).
+- **Editor parity** — `.vscode/` and `.editorconfig` mirror the commit gate, so the editor and the hooks never disagree. `tasks.json` adds a "Format: ruff" task that fixes and formats, a report-only "Lint: ruff + vulture + semgrep" task that puts their findings in the Problems panel, and makes the unit tests the default test task (**Tasks: Run Test Task**).
 - **A container build** — a multi-stage `Dockerfile` (uv build to a minimal non-root runtime) and a `docker-compose.yml` for one-shot runs: `docker compose run --rm app`.
 - **A dev container** — `.devcontainer/` runs the agent in an isolated environment (no host home dir or SSH keys), with the venv and commit gate set up on create.
 - **CI that runs the same gate** — a GitHub Actions workflow runs lint, format, the custom rules, types, architecture, dead code, the CVE audit, and tests on every PR, across Python 3.12, 3.13, and 3.14.
