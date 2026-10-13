@@ -1,82 +1,83 @@
-# Git-level deterministic guardrail (research Pillar 3). Where the Claude Code
-# PostToolUse hook catches issues as the agent edits, pre-commit is the backstop
-# at commit time — nothing lands in a commit until these pass. Enable once with
-# `uv run pre-commit install`. Pinned revs so the checks are reproducible.
+# `uv run pre-commit install` installs both stages below. The fast checks run on
+# each commit; mypy, semgrep and the tests run on push, so commits stay quick.
+# Tools from uv.lock run through `uv run`, so the hooks, the editor and CI use
+# one version of each.
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml
-      - id: check-added-large-files      # stop an agent committing a huge artifact
+      - id: check-added-large-files
       - id: check-merge-conflict
-      - id: debug-statements             # no stray breakpoint()/pdb left behind
+      - id: debug-statements
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.10.1
+    rev: 0.12.23
     hooks:
-      - id: uv-lock       # keep uv.lock in sync with pyproject.toml deps
-
-  - repo: https://github.com/AleksaC/hadolint-py
-    rev: v2.12.1b3
-    hooks:
-      - id: hadolint          # Dockerfile linter; pip-installed binary, no Docker daemon needed
+      - id: uv-lock
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
-      - id: gitleaks          # secret scan: stop an agent committing a key/token
+      - id: gitleaks
 
-  # Everything below runs through `uv run`, so pre-commit uses the SAME pinned
-  # tool versions as the editor hook and CI — no "passes in the hook, fails at
-  # commit" skew from a separately-pinned mirror. Single source of truth = uv.lock.
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.50.3
+    hooks:
+      - id: typos
+
+  - repo: https://github.com/AleksaC/hadolint-py
+    rev: v2.15.1
+    hooks:
+      - id: hadolint
+
   - repo: local
     hooks:
-      - id: ruff          # lint + auto-fix (rules in pyproject.toml, rationale in README.md)
+      - id: ruff
         name: ruff
         entry: uv run ruff check --fix --force-exclude
         language: system
         types: [python]
-      - id: ruff-format   # format
+      - id: ruff-format
         name: ruff-format
         entry: uv run ruff format --force-exclude
         language: system
         types: [python]
-      - id: semgrep       # this repo's own rules (.semgrep/) — what ruff can't express
-        name: semgrep
-        entry: uv run semgrep --config .semgrep --error --quiet
-        language: system
-        types: [python]
-        pass_filenames: false
-      - id: mypy          # strict types — the type oracle, too slow for the editor hook
-        name: mypy
-        entry: uv run mypy src tests
-        language: system
-        types: [python]
-        pass_filenames: false
-      - id: lint-imports  # architectural contracts — the only check that sees a boundary move
+      - id: lint-imports
         name: lint-imports
         entry: uv run lint-imports
         language: system
         types: [python]
         pass_filenames: false
-      - id: vulture       # unreachable/dead code ruff can't detect
+      - id: vulture
         name: vulture
         entry: uv run vulture
         language: system
         types: [python]
         pass_filenames: false
-      - id: pytest        # full suite, no --cov — coverage stays in the manual gate
-        name: pytest
-        entry: uv run pytest
+      - id: mypy
+        name: mypy
+        entry: uv run mypy src tests .claude/hooks/guard.py
         language: system
         types: [python]
         pass_filenames: false
-      - id: pip-audit     # dependency CVEs — network-bound, so only when deps change
-        name: pip-audit
-        entry: uv run pip-audit
+        stages: [pre-push]
+      - id: semgrep
+        name: semgrep
+        entry: uv run semgrep --config .semgrep --error --quiet
         language: system
-        files: ^uv\.lock$
+        types: [python]
         pass_filenames: false
+        stages: [pre-push]
+      - id: pytest
+        name: pytest
+        entry: uv run pytest -x
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push]

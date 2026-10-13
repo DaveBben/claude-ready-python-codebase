@@ -13,8 +13,11 @@ failure: reproduce it locally with
     HYPOTHESIS_PROFILE=ci uv run pytest path/to/test.py
 """
 
+import logging
 import os
+from collections.abc import Iterator
 
+import pytest
 from hypothesis import HealthCheck, settings
 
 # Enough examples to catch the obvious edge cases without slowing the loop.
@@ -31,3 +34,16 @@ settings.register_profile(
 )
 
 settings.load_profile(os.getenv("HYPOTHESIS_PROFILE", "dev"))
+
+
+@pytest.fixture
+def restore_root_logging() -> Iterator[None]:
+    """Snapshot and restore the root logger so setup_logging can't leak state."""
+    root = logging.getLogger()
+    saved_handlers = root.handlers[:]
+    saved_level = root.level
+    try:
+        yield
+    finally:
+        root.handlers[:] = saved_handlers
+        root.setLevel(saved_level)

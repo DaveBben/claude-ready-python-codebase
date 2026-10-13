@@ -4,6 +4,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+from example_project.__main__ import main
 from example_project.exceptions import (
     ConfigurationError,
     ExampleProjectError,
@@ -33,3 +34,13 @@ def test_error_carries_message_for_any_input(message: str) -> None:
 
     assert str(error) == message
     assert isinstance(error, ExampleProjectError)
+
+
+@pytest.mark.usefixtures("restore_root_logging")
+def test_main_prints_banner_and_exits_zero(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("LOG_JSON", "false")
+
+    assert main() == 0
+    assert "example-project" in capsys.readouterr().out

@@ -38,7 +38,7 @@ COPY --from=builder --chown=app:app /app /app
 WORKDIR /app
 # Put the venv on PATH so the console script resolves.
 ENV PATH="/app/.venv/bin:$PATH"
-USER app
+USER 1000:1000
 
 # Runs the `example-project` console script; args pass through.
 ENTRYPOINT ["example-project"]

@@ -3,7 +3,6 @@
 import json
 import logging
 import sys
-from collections.abc import Iterator
 
 import pytest
 
@@ -28,19 +27,6 @@ def _record(
         args=args,
         exc_info=exc_info,  # type: ignore[arg-type]
     )
-
-
-@pytest.fixture
-def restore_root_logging() -> Iterator[None]:
-    """Snapshot and restore the root logger so setup_logging can't leak state."""
-    root = logging.getLogger()
-    saved_handlers = root.handlers[:]
-    saved_level = root.level
-    try:
-        yield
-    finally:
-        root.handlers[:] = saved_handlers
-        root.setLevel(saved_level)
 
 
 class TestJsonFormatter:
