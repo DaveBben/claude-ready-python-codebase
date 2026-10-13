@@ -59,12 +59,17 @@ src = ["src"]
 extend-exclude = ["vulture_whitelist.py", ".claude/hooks/gate.py"]
 
 [tool.ruff.lint]
+# PLR1702 (the nesting guard below) is still a ruff preview rule. Enable preview
+# but gate it to explicitly-selected rules, so only PLR1702 is turned on and
+# every other family keeps its stable behaviour.
+preview = true
+explicit-preview-rules = true
 select = [
     "E", "F", "I", "UP", "B", "SIM", "RUF", "PTH", "PERF", "S",
     "A", "C4", "DTZ", "PIE", "RET", "TC", "ARG", "FURB", "TRY", "PLE",
     "PLW", "PLR", "BLE", "C90", "N", "PGH", "PT", "TID", "G", "LOG",
     "EM", "RSE", "SLF", "FBT", "FLY", "T20", "ANN", "ERA", "W", "ASYNC",
-    "ISC", "INP", "YTT", "EXE",
+    "ISC", "INP", "YTT", "EXE", "PLR1702",
 ]
 ignore = [
     # Line length is the formatter's job.
@@ -84,6 +89,12 @@ ignore = [
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
+
+[tool.ruff.lint.pylint]
+# PLR1702 (PLR, selected above) fires at 4 nested blocks, not ruff's default 5,
+# to catch arrowhead nesting before it sets in. Fix with guard clauses, early
+# returns, or an extracted helper, not deeper indentation.
+max-nested-blocks = 4
 
 [tool.ruff.lint.flake8-annotations]
 # ANN401 bans `Any`, which is the one gap mypy --strict leaves. Keep it for real
