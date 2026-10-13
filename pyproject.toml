@@ -170,8 +170,8 @@ modules = [
 ]
 
 [tool.mutmut]
-# `./check --full` mutates the modules changed since main; run it over all of
-# src/ by hand with `uv run mutmut run`, then `uv run mutmut results`.
+# `./check --full` mutates the modules changed since main; `./check --scheduled`
+# mutates all of src/. Inspect survivors with `uv run mutmut results`.
 source_paths = ["src/"]
 
 [tool.vulture]

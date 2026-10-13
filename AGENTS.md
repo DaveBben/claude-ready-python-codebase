@@ -9,9 +9,10 @@ Name each one here as you add it, with who writes the data it reads.
 Setup: `uv sync && uv run pre-commit install`
 Check: `./check`
 Full check: `./check --full`
+Scheduled check: `./check --scheduled`
 One test: `uv run pytest tests/unit/test_logger.py::TestSetupLogging::test_installs_json_formatter_by_default`
 Run Python and tools through `uv run`, and add a dependency with `uv add`; never `pip install`, which bypasses `uv.lock`.
-Mutation testing by hand: `uv run mutmut run`, then `uv run mutmut results`.
+Mutation testing by hand: `./check --scheduled`, then `uv run mutmut results`.
 
 ## Constraints
 

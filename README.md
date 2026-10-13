@@ -31,6 +31,7 @@ These 2 commands cover every gate:
 ```bash
 ./check         # format, lint, types, import contracts, semgrep, dead code, deptry, zizmor, tests with the coverage floor
 ./check --full  # ./check, then pip-audit, gitleaks over the branch, and mutmut over the modules changed since main
+./check --scheduled  # mutmut over all of src/, for CI's schedule; gates nothing
 ```
 
 They also run on their own:

@@ -6,13 +6,19 @@
 #   ./check --full  ./check, then pip-audit, gitleaks over the branch's commits,
 #                   and mutmut over the modules changed since main. Prints
 #                   surviving mutants and fails on none of them.
+#   ./check --scheduled  for CI's schedule, outside both gates: mutmut over all
+#                   of src/. Prints surviving mutants and fails on none of them.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 mode=${1:-}
 case $mode in
   "" | --full) ;;
-  *) echo "usage: ./check [--full]" >&2; exit 2 ;;
+  --scheduled)
+    # Survivors are reported, never gated: some mutants no test can kill.
+    uv run mutmut run | grep -v '🎉' || echo "mutmut did not finish; see above"
+    exit 0 ;;
+  *) echo "usage: ./check [--full|--scheduled]" >&2; exit 2 ;;
 esac
 
 fail() { echo "$*" >&2; exit 1; }
