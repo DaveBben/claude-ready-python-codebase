@@ -1,0 +1,20 @@
+rules:
+  - id: no-type-ignore
+    # Semgrep's Python parser drops comments, so this is a generic regex over
+    # the raw text, restricted to Python files by the include globs.
+    languages: [generic]
+    severity: ERROR
+    paths:
+      include:
+        - "src/**/*.py"
+        - "tests/**/*.py"
+        - ".claude/hooks/**/*.py"
+      exclude:
+        - "vulture_whitelist.py"
+        - ".semgrep/**"
+    pattern-regex: '#\s*type:\s*ignore\b'
+    message: >-
+      Do not silence mypy with a type: ignore comment. Fix the type: narrow it
+      with an isinstance check, or cast() it with a comment saying why the cast
+      is sound, or ask the user. A type: ignore hides the next real type fault
+      on that line too.

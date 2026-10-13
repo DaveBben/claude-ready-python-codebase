@@ -1,0 +1,20 @@
+rules:
+  - id: no-noqa
+    # Semgrep's Python parser drops comments, so this is a generic regex over
+    # the raw text, restricted to Python files by the include globs.
+    languages: [generic]
+    severity: ERROR
+    paths:
+      include:
+        - "src/**/*.py"
+        - "tests/**/*.py"
+        - ".claude/hooks/**/*.py"
+      exclude:
+        - "vulture_whitelist.py"
+        - ".semgrep/**"
+    pattern-regex: '#\s*noqa\b'
+    message: >-
+      Do not silence ruff with a noqa comment. Fix the cause of the finding.
+      When the user agrees to silence a ruff rule over a block, wrap the block
+      in "# ruff: disable[CODE]" and "# ruff: enable[CODE]", never a "# noqa"
+      on each line. A noqa hides the next real fault on that line too.

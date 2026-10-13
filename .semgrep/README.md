@@ -28,6 +28,18 @@ uv run semgrep --config .semgrep --error --quiet
 | `raise-project-error` | Raising a builtin exception from `src/` |
 | `no-logging-reconfiguration` | `basicConfig` or `addHandler` outside `logger.py` |
 | `logger-name-from-dunder-name` | `logging.getLogger("literal")` |
+| `no-noqa` | A `# noqa` comment; fix the cause, or `# ruff: disable[CODE]` over a block when the user agrees |
+| `no-type-ignore` | A `# type: ignore` comment; fix the type, narrow it, or cast with a reason |
+| `no-skipped-tests` | `@pytest.mark.skip` or `pytest.skip()`; `skipif` with a reason stays allowed |
 
-The codebase had no violation of any of the 3 when they were added.
+The codebase had no violation of any of the 6 when they were added, once the one `# type: ignore` in the tests was typed properly.
 They keep it that way.
+
+## Fixtures
+
+A rule with a fixture has a `.py` file of the same name beside it, annotated with `# ruleid:` and `# ok:`.
+`semgrep --test` skips hidden folders, so `semgrep --test --config .semgrep/` finds nothing; name the pair:
+
+```bash
+uv run semgrep --test --config .semgrep/no-noqa.yml .semgrep/no-noqa.py
+```

@@ -1,12 +1,18 @@
 """Tests for the JSON logging configuration."""
 
+from __future__ import annotations
+
 import json
 import logging
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 
 from example_project.logger import JsonFormatter, setup_logging
+
+if TYPE_CHECKING:
+    from _typeshed import OptExcInfo
 
 
 def _record(
@@ -15,7 +21,7 @@ def _record(
     args: tuple[object, ...] = ("world",),
     name: str = "example_project.demo",
     level: int = logging.INFO,
-    exc_info: object = None,
+    exc_info: OptExcInfo | None = None,
 ) -> logging.LogRecord:
     """Build a LogRecord, defaulting everything a test doesn't care about."""
     return logging.LogRecord(
@@ -25,7 +31,7 @@ def _record(
         lineno=10,
         msg=msg,
         args=args,
-        exc_info=exc_info,  # type: ignore[arg-type]
+        exc_info=exc_info,
     )
 
 

@@ -1,0 +1,21 @@
+rules:
+  - id: no-skipped-tests
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "src/**"
+        - "tests/**"
+        - ".claude/hooks/**"
+      exclude:
+        - "vulture_whitelist.py"
+        - ".semgrep/**"
+    pattern-either:
+      # Matches the bare decorator and the called one, @pytest.mark.skip(...).
+      - pattern: pytest.mark.skip
+      - pattern: pytest.skip(...)
+    message: >-
+      Do not skip a test. Fix it or delete it; a skip hides the next real fault
+      it would have caught. A test that needs a condition uses
+      @pytest.mark.skipif(condition, reason="...") so it runs wherever the
+      condition holds.

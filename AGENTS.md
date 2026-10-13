@@ -16,9 +16,8 @@ Mutation testing by hand: `./check --scheduled`, then `uv run mutmut results`.
 
 ## Constraints
 
-* **Never silence a check to pass it:** a `noqa`, a `type: ignore`, a skip, or a lower `fail_under` hides the next real fault too.
-  Fix the cause, or ask the user.
-  When the user agrees to silence a ruff rule over a block, use `# ruff: disable[CODE]` and `# ruff: enable[CODE]` rather than a `# noqa` on each line.
+* **Never lower `fail_under` to pass coverage:** it hides the next real fault too.
+  Add the test, or ask the user.
 
 ## Traps
 

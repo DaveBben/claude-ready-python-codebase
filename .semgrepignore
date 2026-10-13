@@ -1,0 +1,6 @@
+# Replaces semgrep's built-in ignore list, which skips tests/; the rules in
+# .semgrep/ must see the tests.
+.git/
+.venv/
+mutants/
+.semgrep/
