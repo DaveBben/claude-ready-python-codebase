@@ -2,16 +2,12 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
+      "Bash(./check)",
+      "Bash(./check --full)",
       "Bash(uv sync:*)",
       "Bash(uv run pytest:*)",
       "Bash(uv run mypy:*)",
-      "Bash(uv run ruff:*)",
-      "Bash(uv run vulture:*)",
-      "Bash(uv run semgrep:*)",
-      "Bash(uv run lint-imports:*)",
-      "Bash(uv run pip-audit:*)",
-      "Bash(uv run pre-commit:*)",
-      "Bash(test:*)"
+      "Bash(uv run ruff:*)"
     ],
     "deny": [
       "Read(./.env*)",
@@ -24,51 +20,22 @@
     ]
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/bash-guard.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/ruff-fix.sh"
-          },
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pyproject-guard.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/turn-end-check.sh"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
-          }
-        ]
-      }
-    ]
+    "Stop": [{
+      "hooks": [{"type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gate.py stop", "timeout": 600}]
+    }],
+    "PreToolUse": [{
+      "matcher": "Bash",
+      "hooks": [{"type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard.py", "timeout": 30}]
+    }, {
+      "matcher": "Bash",
+      "hooks": [{"type": "command", "if": "Bash(*create*)", "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gate.py pr", "timeout": 3600}]
+    }, {
+      "matcher": "mcp__.*(pull|merge)_request.*",
+      "hooks": [{"type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/gate.py pr", "timeout": 3600}]
+    }],
+    "PostToolUse": [{
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [{"type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit.sh", "timeout": 60}]
+    }]
   }
 }

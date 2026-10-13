@@ -5,7 +5,10 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 .hypothesis/
+.import_linter_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 *.egg-info/
 dist/
@@ -15,9 +18,11 @@ build/
 .DS_Store
 node_modules/
 
-# Claude Code: commit .claude/settings.json (shared team config + hooks) but keep
-# each developer's personal overrides local.
-.claude/settings.local.json
+# .claude/ holds agent worktrees and local settings; only the shared settings, hooks and rules are tracked.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/rules/
 
 # mutmut mutation-testing working dir
 mutants/

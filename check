@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# The repository's check command. Stops at the first failure.
+#   ./check         format, lint, types, import contracts, semgrep rules, dead
+#                   code, dependency hygiene, workflow security, the hook
+#                   self-tests, and the tests with the coverage floor
+#   ./check --full  ./check, then pip-audit, gitleaks over the branch's commits,
+#                   and mutmut over the modules changed since main. Prints
+#                   surviving mutants and fails on none of them.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+mode=${1:-}
+case $mode in
+  "" | --full) ;;
+  *) echo "usage: ./check [--full]" >&2; exit 2 ;;
+esac
+
+fail() { echo "$*" >&2; exit 1; }
+
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy src tests .claude/hooks/guard.py
+uv run lint-imports
+uv run semgrep --config .semgrep --error --quiet
+uv run vulture
+uv run deptry src
+uv run zizmor --offline --quiet .github
+python3 .claude/hooks/guard.py --self-test
+
+# Repository rules no linter holds. Each message says what to do instead.
+[ "$(readlink CLAUDE.md)" = AGENTS.md ] ||
+  fail "CLAUDE.md must be a symlink to AGENTS.md, not a second copy. Put the edits in AGENTS.md, then: ln -sf AGENTS.md CLAUDE.md"
+
+uv run pytest -x --cov
+
+if [ "$mode" = --full ]; then
+  uv run pip-audit --skip-editable
+
+  base=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)
+  command -v gitleaks >/dev/null ||
+    fail "gitleaks is not on the PATH, so the branch's commits were not scanned for secrets. Install it: brew install gitleaks"
+  if [ -n "$base" ]; then
+    gitleaks git --log-opts="$base..HEAD" --redact --no-banner .
+  fi
+
+  # mutmut has no diff option, so each module changed since main is mutated
+  # whole. A shallow clone with no main to diff against skips this step.
+  if [ -z "$base" ]; then
+    echo "mutmut: no main branch to diff against; skipped"
+  else
+    globs=$(git diff --name-only --diff-filter=d "$base" -- 'src/*.py' | sed 's|^src/||; s|\.py$|.*|; s|/|.|g')
+    if [ -z "$globs" ]; then
+      echo "mutmut: no source changed since main; skipped"
+    else
+      # Survivors are reported, never gated: some mutants no test can kill.
+      # set -f: the globs are mutmut's to match, not the shell's.
+      set -f
+      # grep -v: drop the killed mutants (🎉) so the survivors stand out.
+      uv run mutmut run $globs | grep -v '🎉' || echo "mutmut did not finish; see above"
+      set +f
+    fi
+  fi
+fi

@@ -13,7 +13,7 @@
             "source.organizeImports.ruff": "explicit"
         }
     },
-    // Docs and CLAUDE.md files use one line per paragraph (soft wrap) rather than
+    // Docs and AGENTS.md files use one line per paragraph (soft wrap) rather than
     // hard-wrapping at a fixed column, so the editor must wrap them at the window
     // edge. Without this, a paragraph shows as one long line running off-screen.
     "[markdown]": {
