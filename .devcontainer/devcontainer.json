@@ -1,7 +1,7 @@
 {
   // Isolated dev environment for humans and AI agents: the container can't reach
   // your home dir, SSH keys, or host tooling. Same uv-managed setup either way.
-  "name": "ai-ready-python-codebase",
+  "name": "example-project",
   "image": "mcr.microsoft.com/devcontainers/python:3.13",
   "features": {
     "ghcr.io/va-h/devcontainers-features/uv:1": {},
