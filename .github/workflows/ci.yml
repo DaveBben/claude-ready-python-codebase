@@ -43,10 +43,9 @@ jobs:
         run: uv run vulture
       - name: Dependencies declared and used
         run: uv run deptry src
+      # --offline: on Gitea, github.token is a Gitea token, which GitHub rejects.
       - name: Workflow security
-        run: uv run zizmor .github
-        env:
-          GH_TOKEN: ${{ github.token }}
+        run: uv run zizmor --offline .github
       - name: Vulnerability audit
         run: uv run pip-audit --skip-editable
 

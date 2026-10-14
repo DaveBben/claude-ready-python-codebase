@@ -26,6 +26,8 @@ Mutation testing by hand: `./check --scheduled`, then `uv run mutmut results`.
 * Tests run in random order (pytest-randomly).
   Rerun a failure in the same order with `uv run pytest --randomly-seed=last`.
 * `mutants/` is mutmut's copy of the tree: edit `src/`, never `mutants/`.
+* On macOS, a mutant mutmut reports as "segfault" is usually the system proxy lookup crashing after fork(), not the test.
+  httpx, requests and urllib make that lookup; set `no_proxy` in the tests (an autouse `monkeypatch.setenv("no_proxy", "*")`) and it is skipped.
 
 ## Pointers
 
