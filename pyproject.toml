@@ -11,21 +11,21 @@ dependencies = []
 [dependency-groups]
 dev = [
     "deptry>=0.25.1",
-    "hypothesis>=6.168.5",
+    "hypothesis>=6.170.5",
     "import-linter>=2.15",
     "mutmut>=3.8.0",
     "mypy>=2.4.0",
     "pip-audit>=2.10.1",
-    "pre-commit>=4.6.2",
+    "pre-commit>=4.7.0",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "pytest-randomly>=5.0.0",
     "pytest-socket>=0.8.1",
     "pytest-timeout>=2.4.0",
-    "ruff>=0.16.10",
-    "semgrep>=1.179.0",
+    "ruff>=0.17.1",
+    "semgrep>=1.182.0",
     "vulture>=2.16",
-    "zizmor>=1.30.1",
+    "zizmor>=1.31.1",
 ]
 
 [tool.uv]
