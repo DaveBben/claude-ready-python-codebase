@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-editable
 
 # --- Runtime stage: minimal image, non-root ---
-FROM python:3.13-slim-bookworm AS runtime
+FROM python:3.15-slim-bookworm AS runtime
 
 # Non-root user for security.
 RUN groupadd --system --gid 1000 app \
