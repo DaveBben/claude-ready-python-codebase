@@ -1,7 +1,8 @@
 name: CI
 
-# Push runs on main only, so a pull request's branch is checked once, by its
-# pull_request run.
+# The template's own CI lives in its assets and runs only in projects made from
+# it, so this runs ./check --full: a project made by the skill, with its own
+# ./check and pip-audit, on each Python version the template supports.
 on:
   push:
     branches: [main]
@@ -15,49 +16,14 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          enable-cache: true
-
-      - run: uv sync --locked
-
-      # One step per check, so the run page names the one that failed.
-      - name: Format
-        run: uv run ruff format --check .
-      - name: Lint
-        run: uv run ruff check .
-      - name: Types
-        run: uv run mypy src tests .claude/hooks/guard.py
-      - name: Import contracts
-        run: uv run lint-imports
-      - name: Semgrep rules
-        run: uv run semgrep --config .semgrep --error --quiet
-      - name: Dead code
-        run: uv run vulture
-      - name: Dependencies declared and used
-        run: uv run deptry src
-      - name: Workflow security
-        run: uv run zizmor .github
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - name: Vulnerability audit
-        run: uv run pip-audit --skip-editable
-
-  test:
+  check:
     runs-on: ubuntu-latest
     strategy:
       # Run every version to completion so a floor-only break is visible.
       fail-fast: false
       matrix:
-        # The support floor (requires-python), the dev version (.python-version)
-        # and the newest release.
+        # The template's support floor (requires-python), its dev version
+        # (.python-version) and the newest release.
         python-version: ["3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -67,11 +33,7 @@ jobs:
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
           enable-cache: true
+          cache-dependency-glob: skills/python-template/python-template/assets/project/uv.lock
           python-version: ${{ matrix.python-version }}
 
-      - run: uv sync --locked
-
-      # HYPOTHESIS_PROFILE=ci: the thorough profile in tests/conftest.py.
-      - run: uv run pytest --cov
-        env:
-          HYPOTHESIS_PROFILE: ci
+      - run: ./check --full

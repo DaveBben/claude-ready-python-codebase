@@ -1,9 +1,17 @@
 version: 2
-# cooldown: propose a release only once it is 7 days old, matching
-# exclude-newer in pyproject.toml. Security updates are not delayed.
+# The template's own dependabot.yml is for the projects made from it; GitHub
+# reads only this one. cooldown: propose a release only once it is 7 days old,
+# matching exclude-newer in the template's pyproject.toml.
 updates:
-  - package-ecosystem: uv
+  - package-ecosystem: github-actions
     directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: uv
+    directory: /skills/python-template/python-template/assets/project
     schedule:
       interval: weekly
     cooldown:
@@ -13,14 +21,14 @@ updates:
         dependency-type: development
 
   - package-ecosystem: github-actions
-    directory: /
+    directory: /skills/python-template/python-template/assets/project
     schedule:
       interval: weekly
     cooldown:
       default-days: 7
 
   - package-ecosystem: docker
-    directory: /
+    directory: /skills/python-template/python-template/assets/project
     schedule:
       interval: weekly
     cooldown:

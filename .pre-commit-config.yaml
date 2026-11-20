@@ -1,26 +1,7 @@
-# `uv run pre-commit install` installs both stages below. The fast checks run on
-# each commit; mypy, semgrep and the tests run on push, so commits stay quick.
-# Tools from uv.lock run through `uv run`, so the hooks, the editor and CI use
-# one version of each.
-default_install_hook_types: [pre-commit, pre-push]
-
+# This repository's own commit hooks: secrets and typos. The template's hooks
+# are in its assets and run in the projects made from it.
+# Install once with: uvx pre-commit install
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-      - id: check-yaml
-      - id: check-toml
-      - id: check-added-large-files
-      - id: check-merge-conflict
-      - id: debug-statements
-
-  - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.12.23
-    hooks:
-      - id: uv-lock
-
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.30.1
     hooks:
@@ -30,54 +11,3 @@ repos:
     rev: v1.50.3
     hooks:
       - id: typos
-
-  - repo: https://github.com/AleksaC/hadolint-py
-    rev: v2.15.1
-    hooks:
-      - id: hadolint
-
-  - repo: local
-    hooks:
-      - id: ruff
-        name: ruff
-        entry: uv run ruff check --fix --force-exclude
-        language: system
-        types: [python]
-      - id: ruff-format
-        name: ruff-format
-        entry: uv run ruff format --force-exclude
-        language: system
-        types: [python]
-      - id: lint-imports
-        name: lint-imports
-        entry: uv run lint-imports
-        language: system
-        types: [python]
-        pass_filenames: false
-      - id: vulture
-        name: vulture
-        entry: uv run vulture
-        language: system
-        types: [python]
-        pass_filenames: false
-      - id: mypy
-        name: mypy
-        entry: uv run mypy src tests .claude/hooks/guard.py
-        language: system
-        types: [python]
-        pass_filenames: false
-        stages: [pre-push]
-      - id: semgrep
-        name: semgrep
-        entry: uv run semgrep --config .semgrep --error --quiet
-        language: system
-        types: [python]
-        pass_filenames: false
-        stages: [pre-push]
-      - id: pytest
-        name: pytest
-        entry: uv run pytest -x
-        language: system
-        types: [python]
-        pass_filenames: false
-        stages: [pre-push]

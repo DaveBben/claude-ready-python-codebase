@@ -1,0 +1,9 @@
+# Lints the skill's scripts with the template's rules.
+extend = "skills/python-template/python-template/assets/project/pyproject.toml"
+extend-exclude = ["skills/python-template/python-template/assets"]
+
+[lint.per-file-ignores]
+# T201: a CLI script reports with print. S101: its --self-test asserts.
+# S603/S607: it runs `git init` from PATH with literal arguments.
+# INP001: a script, not a package.
+"skills/*/*/scripts/*.py" = ["T201", "S101", "S603", "S607", "INP001"]

@@ -31,8 +31,9 @@ uv run semgrep --config .semgrep --error --quiet
 | `no-noqa` | A `# noqa` comment; fix the cause, or `# ruff: disable[CODE]` over a block when the user agrees |
 | `no-type-ignore` | A `# type: ignore` comment; fix the type, narrow it, or cast with a reason |
 | `no-skipped-tests` | `@pytest.mark.skip` or `pytest.skip()`; `skipif` with a reason stays allowed |
+| `no-assertless-tests` | A `test_*` function with no `assert`, `pytest.raises`, `.assert*()` call or `assert_*` helper |
 
-The codebase had no violation of any of the 6 when they were added, once the one `# type: ignore` in the tests was typed properly.
+The codebase had no violation of any of the 7 when they were added, once the one `# type: ignore` in the tests was typed properly.
 They keep it that way.
 
 ## Fixtures

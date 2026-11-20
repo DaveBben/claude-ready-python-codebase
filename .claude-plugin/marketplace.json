@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "python-template",
+  "owner": {
+    "name": "DaveBben"
+  },
+  "description": "A python-template skill that starts a kept Python project from a uv src-layout template with its checks, Claude Code hooks, pre-commit and CI already wired, renames it to the project and fills in its own text with you.",
+  "plugins": [
+    {
+      "name": "python-template",
+      "source": "./plugins/python-template",
+      "description": "A python-template skill that starts a kept Python project from a uv src-layout template with its checks, Claude Code hooks, pre-commit and CI already wired, renames it to the project and fills in its own text with you.",
+      "version": "3.0.0",
+      "license": "MIT",
+      "skills": [
+        "./skills/python-template"
+      ],
+      "author": {
+        "name": "DaveBben"
+      }
+    }
+  ]
+}

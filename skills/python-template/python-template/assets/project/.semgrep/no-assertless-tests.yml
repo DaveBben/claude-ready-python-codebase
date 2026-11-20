@@ -1,0 +1,23 @@
+rules:
+  - id: no-assertless-tests
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "tests/**"
+    patterns:
+      - pattern: |
+          def $TEST(...):
+            ...
+      - metavariable-regex:
+          metavariable: $TEST
+          regex: ^test
+      # A test body with any of these checks something: assert, pytest.raises
+      # or pytest.fail, self.assertEqual and mock.assert_called_with, or a
+      # helper named assert_* or _assert_*.
+      - pattern-not-regex: (?m)^\s+assert\b|\bpytest\.(?:raises|fail)\b|\.assert\w*\(|(?<!\w)_?assert_\w*\(
+    message: >-
+      This test asserts nothing, so it passes whatever the code does. Assert
+      what a caller sees, in real values, or check the error with
+      pytest.raises. A helper that asserts for the test must be named
+      assert_* or _assert_* so this rule can see it.

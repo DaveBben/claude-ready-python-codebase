@@ -17,10 +17,11 @@ input exits 0, and so does a PyPI lookup that fails, so a broken hook or network
 never blocks unrelated work.
 
 The command is split the way a shell splits it (quotes kept whole; `;`, `&&`,
-`|` and newlines end each simple command), and each simple command's program is
-found through the wrappers that run another command: `env`, `timeout`, `uv run`,
-`python -m`, `bash -c`, `eval` and the like. Quoted data (`git commit -m "..."`) is not
-a program, and passes.
+`|` and newlines end each simple command; a redirection such as `2>&1` and
+its target are dropped), and each simple command's program is found through
+the wrappers that run another command: `env`, `timeout`, `uv run`,
+`python -m`, `bash -c`, `eval`, `xargs`, `find -exec` and the like. Quoted data
+(`git commit -m "..."`) is not a program, and passes.
 """
 
 import json
@@ -44,6 +45,8 @@ TOO_NEW = "`uv add {name}`: {name} was first published {days} days ago. A packag
 
 HEREDOC = re.compile(r"""<<-?\s*['"]?(\w+)['"]?[^\n]*\n.*?\n\1\b""", re.DOTALL)
 OPERATOR_CHARS = ";&|()\n"
+# A token of only these, with a < or >, is a redirection such as 2>&1, > f or &> f.
+REDIRECT_CHARS = "<>&"
 PLAIN_WRAPPERS = {
     "env",
     "nohup",
@@ -110,7 +113,9 @@ def pypi_first_upload(name: str) -> datetime | None:
 def simple_commands(command: str) -> Iterator[list[str]]:
     """Each simple command in `command` as its words, quotes removed."""
     lexer = shlex.shlex(
-        HEREDOC.sub("", command), posix=True, punctuation_chars=OPERATOR_CHARS
+        HEREDOC.sub("", command),
+        posix=True,
+        punctuation_chars=OPERATOR_CHARS + "<>",
     )
     lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
@@ -119,8 +124,16 @@ def simple_commands(command: str) -> Iterator[list[str]]:
     except ValueError:  # unbalanced quotes: fall back to plain words
         tokens = command.split()
     words: list[str] = []
+    target = False
     for token in tokens:
-        if token and set(token) <= set(OPERATOR_CHARS):
+        if target:  # the file or descriptor a redirection names: not a word
+            target = False
+            continue
+        if set(token) & set("<>") and set(token) <= set(REDIRECT_CHARS):
+            if words and words[-1].isdigit():  # the 2 of 2>&1
+                words.pop()
+            target = True
+        elif token and set(token) <= set(OPERATOR_CHARS + "<>"):
             if words:
                 yield words
             words = []
@@ -157,6 +170,8 @@ class Guard:
             "git": git_reason,
             "eval": lambda args: self.check(" ".join(args)),
             "export": skip_reason,
+            "xargs": lambda args: _guard_xargs_find(self, "xargs", args),
+            "find": lambda args: _guard_xargs_find(self, "find", args),
         }
 
     def check(self, command: str) -> str | None:
@@ -247,6 +262,27 @@ class Guard:
         return None
 
 
+XARGS_VALUE_FLAGS = {
+    "-I", "-i", "--replace", "-n", "--max-args", "-L", "--max-lines",
+    "-P", "--max-procs", "-s", "--max-chars", "-E", "-e", "--eof",
+    "-d", "--delimiter", "-a", "--arg-file",
+}  # fmt: skip
+
+
+def _guard_xargs_find(guard: "Guard", program: str, args: list[str]) -> str | None:
+    """The command xargs or find runs, checked like any other simple command."""
+    if program == "xargs":
+        return guard.reason_for(after_options(args, XARGS_VALUE_FLAGS))
+    for i, arg in enumerate(args):
+        if arg in ("-exec", "-execdir", "-ok", "-okdir"):
+            run = args[i + 1 :]
+            end = next((j for j, a in enumerate(run) if a in (";", "+")), len(run))
+            reason = guard.reason_for(run[:end])
+            if reason:
+                return reason
+    return None
+
+
 def skip_reason(words: list[str]) -> str | None:
     """`SKIP=hook` in a command's leading assignments, or in `export`, skips that pre-commit hook."""
     for word in words:
@@ -324,8 +360,16 @@ def self_test() -> None:
         "export SKIP=pytest; git push": NO_VERIFY,
         "git config core.hooksPath /dev/null": NO_VERIFY,
         "eval 'pip install x'": PIP,
+        "xargs pip install evil": PIP,
+        "echo x | xargs -n1 pip install evil": PIP,
+        "xargs -I{} git add -A": GIT_ADD,
+        "find . -name '*.txt' -exec pip install evil ;": PIP,
+        "find . -execdir git add --all +": GIT_ADD,
         "uv add no-such-pkg": MISSING.format(name="no-such-pkg"),
         "uv add --dev 'Fresh_Pkg>=1.0'": TOO_NEW.format(name="fresh-pkg", days=10),
+        "uv add no-such-pkg 2>&1 | tail -1": MISSING.format(name="no-such-pkg"),
+        "git add -A 2>/dev/null": GIT_ADD,
+        "diff <(pip install x) y": PIP,
     }
     for command, reason in refused.items():
         assert check(command) == reason, command
@@ -344,8 +388,14 @@ def self_test() -> None:
         "uv add offline",
         "uv add ./local-pkg git+https://github.com/a/b",
         "uv add --index https://example.com/simple private-pkg",
+        "uv add requests 2>&1 | tail -1",
+        "uv add requests > log.txt",
+        "uv add requests &>/dev/null",
+        "uv add 'requests>=2' 2> err.txt",
         "uv run pytest",
         "cat <<EOF\npip install x\nEOF",
+        "find . -name '*.py' -exec ruff check {} +",
+        "git ls-files | xargs wc -l",
     ]
     for command in allowed:
         assert check(command) is None, command

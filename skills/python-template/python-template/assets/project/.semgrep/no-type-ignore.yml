@@ -1,7 +1,9 @@
 rules:
   - id: no-type-ignore
     # Semgrep's Python parser drops comments, so this is a generic regex over
-    # the raw text, restricted to Python files by the include globs.
+    # the raw text, restricted to Python files by the include globs. It anchors
+    # to a real comment (line start, or the >=2 spaces PEP 8 and ruff put before
+    # an inline #) so the literal text "type: ignore" in a string is not flagged.
     languages: [generic]
     severity: ERROR
     paths:
@@ -12,7 +14,7 @@ rules:
       exclude:
         - "vulture_whitelist.py"
         - ".semgrep/**"
-    pattern-regex: '#\s*type:\s*ignore\b'
+    pattern-regex: '(^|\s{2,})#\s*type:\s*ignore\b'
     message: >-
       Do not silence mypy with a type: ignore comment. Fix the type: narrow it
       with an isinstance check, or cast() it with a comment saying why the cast

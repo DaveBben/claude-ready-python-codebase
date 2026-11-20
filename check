@@ -1,69 +1,58 @@
 #!/usr/bin/env bash
-# The repository's check command. Stops at the first failure.
-#   ./check         format, lint, types, import contracts, semgrep rules, dead
-#                   code, dependency hygiene, workflow security, the hook
-#                   self-tests, and the tests with the coverage floor
-#   ./check --full  ./check, then pip-audit, gitleaks over the branch's commits,
-#                   and mutmut over the modules changed since main. Prints
-#                   surviving mutants and fails on none of them.
-#   ./check --scheduled  for CI's schedule, outside both gates: mutmut over all
-#                   of src/. Prints surviving mutants and fails on none of them.
+# The repository's check. Stops at the first failure.
+#   ./check         the plugin manifests, the script's lint and self-test, then a
+#                   project made from the template with the steps SKILL.md gives,
+#                   and that project's own ./check
+#   ./check --full  ./check, then pip-audit in that project, reported and not
+#                   gated. Its gitleaks and mutmut steps need a branch history
+#                   a fresh project lacks.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 mode=${1:-}
 case $mode in
   "" | --full) ;;
-  --scheduled)
-    # Survivors are reported, never gated: some mutants no test can kill.
-    uv run mutmut run | grep -v '🎉' || echo "mutmut did not finish; see above"
-    exit 0 ;;
-  *) echo "usage: ./check [--full|--scheduled]" >&2; exit 2 ;;
+  *) echo "usage: ./check [--full]" >&2; exit 2 ;;
 esac
 
-fail() { echo "$*" >&2; exit 1; }
+skill=skills/python-template/python-template
+uv run --no-project --quiet python - "$skill" <<'PY'
+import json, re, sys
+from pathlib import Path
+skill = Path(sys.argv[1])
+front = (skill / "SKILL.md").read_text().split("---")[1]
+name = re.search(r"^name: (.+)$", front, re.M).group(1)
+desc = re.search(r'^description: "(.+)"$', front, re.M).group(1)
+versions = {
+    "SKILL.md": re.search(r'^  version: "(.+)"$', front, re.M).group(1),
+    "plugin.json": json.loads(Path("plugins/python-template/.claude-plugin/plugin.json").read_text())["version"],
+    "marketplace.json": json.loads(Path(".claude-plugin/marketplace.json").read_text())["plugins"][0]["version"],
+}
+errors = []
+if name != skill.name:
+    errors.append(f"SKILL.md name {name!r} must equal its directory {skill.name!r}")
+if len(desc) > 1024:
+    errors.append(f"SKILL.md description is {len(desc)} characters; the limit is 1024")
+if len(set(versions.values())) != 1:
+    errors.append(f"versions differ, bump them together: {versions}")
+sys.exit("\n".join(errors) or None)
+PY
 
-uv run ruff format --check .
-uv run ruff check .
-uv run mypy src tests .claude/hooks/guard.py
-uv run lint-imports
-uv run semgrep --config .semgrep --error --quiet
-uv run vulture
-uv run deptry src
-uv run zizmor --offline --quiet .github
-python3 .claude/hooks/guard.py --self-test
+ruff="uv run --project $skill/assets/project --quiet ruff"
+$ruff check --config ruff.toml "$skill/scripts"
+$ruff format --check --config ruff.toml "$skill/scripts"
+uv run --quiet "$skill/scripts/new_project.py" --self-test
 
-# Repository rules no linter holds. Each message says what to do instead.
-[ "$(readlink CLAUDE.md)" = AGENTS.md ] ||
-  fail "CLAUDE.md must be a symlink to AGENTS.md, not a second copy. Put the edits in AGENTS.md, then: ln -sf AGENTS.md CLAUDE.md"
-
-uv run pytest -x --cov
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+uv run --quiet "$skill/scripts/new_project.py" "$tmp/p" acme_tools "Tools for Acme." "Acme Ltd"
+cd "$tmp/p"
+uv lock --quiet
+uv sync --quiet
+uv run ruff check --fix --quiet . && uv run ruff format --quiet .
+./check
 
 if [ "$mode" = --full ]; then
-  uv run pip-audit --skip-editable
-
-  base=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)
-  command -v gitleaks >/dev/null ||
-    fail "gitleaks is not on the PATH, so the branch's commits were not scanned for secrets. Install it: brew install gitleaks"
-  if [ -n "$base" ]; then
-    gitleaks git --log-opts="$base..HEAD" --redact --no-banner .
-  fi
-
-  # mutmut has no diff option, so each module changed since main is mutated
-  # whole. A shallow clone with no main to diff against skips this step.
-  if [ -z "$base" ]; then
-    echo "mutmut: no main branch to diff against; skipped"
-  else
-    globs=$(git diff --name-only --diff-filter=d "$base" -- 'src/*.py' | sed 's|^src/||; s|\.py$|.*|; s|/|.|g')
-    if [ -z "$globs" ]; then
-      echo "mutmut: no source changed since main; skipped"
-    else
-      # Survivors are reported, never gated: some mutants no test can kill.
-      # set -f: the globs are mutmut's to match, not the shell's.
-      set -f
-      # grep -v: drop the killed mutants (🎉) so the survivors stand out.
-      uv run mutmut run $globs | grep -v '🎉' || echo "mutmut did not finish; see above"
-      set +f
-    fi
-  fi
+  # Reported, not gated, as in the template's own ./check --full.
+  uv run pip-audit --skip-editable || echo "pip-audit: not gated; see the template's ./check for what to do"
 fi

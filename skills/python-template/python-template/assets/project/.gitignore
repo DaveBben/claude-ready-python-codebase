@@ -1,0 +1,28 @@
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.hypothesis/
+.import_linter_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+*.so
+.env
+.DS_Store
+node_modules/
+
+# .claude/ holds agent worktrees and local settings; only the shared settings, hooks and rules are tracked.
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/rules/
+
+# mutmut mutation-testing working dir
+mutants/
