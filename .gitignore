@@ -1,5 +1,7 @@
+.DS_Store
 __pycache__/
 *.py[cod]
+# Local state from developing the template in place.
 .venv/
 .mypy_cache/
 .ruff_cache/
@@ -7,22 +9,8 @@ __pycache__/
 .hypothesis/
 .import_linter_cache/
 .coverage
-.coverage.*
-coverage.xml
-htmlcov/
-*.egg-info/
-dist/
-build/
-*.so
-.env
-.DS_Store
-node_modules/
-
-# .claude/ holds agent worktrees and local settings; only the shared settings, hooks and rules are tracked.
+mutants/
+# .claude/ is local except the links to the template's hooks and settings.
 .claude/*
 !.claude/settings.json
-!.claude/hooks/
-!.claude/rules/
-
-# mutmut mutation-testing working dir
-mutants/
+!.claude/hooks

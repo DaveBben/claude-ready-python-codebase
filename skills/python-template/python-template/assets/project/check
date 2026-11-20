@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# The repository's check command. Stops at the first failure.
+#   ./check         format, lint, types, import contracts, semgrep rules, dead
+#                   code, dependency hygiene, workflow security, the hook
+#                   self-tests, and the tests with the coverage floor
+#   ./check --full  ./check, then pip-audit, gitleaks over the branch's commits,
+#                   and mutmut over the modules changed since main. Reports
+#                   known vulnerabilities and surviving mutants, and fails on
+#                   none of them.
+#   ./check --scheduled  for CI's schedule, outside both gates: mutmut over all
+#                   of src/. Prints surviving mutants and fails on none of them.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+fail() { echo "$*" >&2; exit 1; }
+
+# Run mutmut, drop the killed mutants (🎉) so survivors stand out, and report
+# its own exit. mutmut returns non-zero both for survivors (never gated here)
+# and for a crash, so PIPESTATUS[0] is surfaced, not swallowed by grep's status.
+mutmut_report() {
+  uv run mutmut run "$@" | grep -v '🎉' || true
+  rc=${PIPESTATUS[0]}
+  [ "$rc" -eq 0 ] && return
+  # A survivor means a test did not catch the mutation: usually a weak or
+  # missing test. Not gated, because equivalent mutants can never be killed.
+  echo "mutmut exited $rc; not gated. Each survivor above means a test let the"
+  echo "mutation through: strengthen the test that should have caught it, or"
+  echo "confirm the mutant is equivalent. Do not add a test only to kill one."
+}
+
+mode=${1:-}
+case $mode in
+  "" | --full) ;;
+  --scheduled)
+    # Survivors are reported, never gated: some mutants no test can kill.
+    mutmut_report
+    exit 0 ;;
+  *) echo "usage: ./check [--full|--scheduled]" >&2; exit 2 ;;
+esac
+
+uv run ruff format --check .
+uv run ruff check .
+uv run mypy src tests .claude/hooks/guard.py .claude/hooks/gate.py
+uv run lint-imports
+uv run semgrep --config .semgrep --error --quiet
+uv run vulture
+uv run deptry src
+uv run zizmor --offline --quiet .github
+python3 .claude/hooks/guard.py --self-test
+python3 .claude/hooks/gate.py --self-test
+
+# Repository rules no linter holds. Each message says what to do instead.
+[ "$(readlink CLAUDE.md)" = AGENTS.md ] ||
+  fail "CLAUDE.md must be a symlink to AGENTS.md, not a second copy. Put the edits in AGENTS.md, then: ln -sf AGENTS.md CLAUDE.md"
+
+[ "$(wc -l < AGENTS.md)" -le 100 ] && [ "$(wc -c < AGENTS.md)" -le 8192 ] ||
+  fail "AGENTS.md is over 100 lines or 8 KB, and every session reads all of it. Cut what the model already does, or move detail into the files it points to."
+
+uv run pytest -x --cov
+
+if [ "$mode" = --full ]; then
+  # Reported, never gated: a vulnerable pin held by a dev tool, such as semgrep's
+  # on mcp, cannot be fixed until that tool releases, and must not block every
+  # pull request until then.
+  uv run pip-audit --skip-editable ||
+    echo "pip-audit: not gated. Upgrade each package named above where a fix is
+allowed: uv lock --upgrade-package <name>. A package another one pins, such as
+mcp under semgrep, waits for that package's next release: uv tree --invert --package <name>"
+
+  base=$(git merge-base HEAD main 2>/dev/null || git merge-base HEAD origin/main 2>/dev/null || true)
+  command -v gitleaks >/dev/null ||
+    fail "gitleaks is not on the PATH, so the branch's commits were not scanned for secrets. Install it: brew install gitleaks"
+  # With a base, scan just this branch's commits; without one (a shallow clone
+  # with no main), scan the whole history rather than silently scanning nothing.
+  if [ -n "$base" ]; then
+    gitleaks git --log-opts="$base..HEAD" --redact --no-banner .
+  else
+    echo "gitleaks: no base to diff against; scanning the full history"
+    gitleaks git --redact --no-banner .
+  fi
+
+  # mutmut has no diff option, so each module changed since main is mutated
+  # whole. A shallow clone with no main to diff against skips this step.
+  if [ -z "$base" ]; then
+    echo "mutmut: no main branch to diff against; skipped"
+  else
+    globs=$(git diff --name-only --diff-filter=d "$base" -- 'src/*.py' | sed 's|^src/||; s|\.py$|.*|; s|/|.|g')
+    if [ -z "$globs" ]; then
+      echo "mutmut: no source changed since main; skipped"
+    else
+      # set -f: the globs are mutmut's to match, not the shell's.
+      set -f
+      mutmut_report $globs
+      set +f
+    fi
+  fi
+fi

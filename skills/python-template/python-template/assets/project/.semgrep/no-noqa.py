@@ -10,3 +10,5 @@ import json
 # ruff: enable[F401]
 # ok: no-noqa
 noqa_count = 0
+# ok: no-noqa
+message = "do not use # noqa to silence ruff"

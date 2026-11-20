@@ -1,0 +1,9 @@
+{
+  "name": "python-template",
+  "version": "3.0.0",
+  "description": "A python-template skill that starts a kept Python project from a uv src-layout template with its checks, Claude Code hooks, pre-commit and CI already wired, renames it to the project and fills in its own text with you.",
+  "license": "MIT",
+  "author": {
+    "name": "DaveBben"
+  }
+}

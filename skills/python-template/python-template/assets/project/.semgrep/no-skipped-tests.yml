@@ -14,8 +14,12 @@ rules:
       # Matches the bare decorator and the called one, @pytest.mark.skip(...).
       - pattern: pytest.mark.skip
       - pattern: pytest.skip(...)
+      # The unittest equivalents, so a TestCase cannot skip either.
+      - pattern: unittest.skip
+      - pattern: unittest.SkipTest
+      - pattern: $T.skipTest(...)
     message: >-
       Do not skip a test. Fix it or delete it; a skip hides the next real fault
       it would have caught. A test that needs a condition uses
-      @pytest.mark.skipif(condition, reason="...") so it runs wherever the
-      condition holds.
+      @pytest.mark.skipif(condition, reason="...") (or unittest.skipIf) so it
+      runs wherever the condition holds.

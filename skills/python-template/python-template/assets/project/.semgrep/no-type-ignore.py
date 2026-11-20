@@ -11,3 +11,5 @@ third: int = "text"  #type:ignore[assignment]
 fourth = cast(int, {"n": 1}["n"])
 # ok: no-type-ignore
 ignore_type = "type: ignored"
+# ok: no-type-ignore
+hint = "never add a # type: ignore comment"
